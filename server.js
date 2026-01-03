@@ -12,29 +12,29 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN;   // 🔐 IMPORTANT
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
 
 if (!MONGO_URI || !ADMIN_TOKEN) {
-  console.error("❌ Add MONGO_URI and ADMIN_TOKEN in .env");
+  console.error("❌ Add MONGO_URI & ADMIN_TOKEN in .env file");
   process.exit(1);
 }
 
-// DB connect
+// MongoDB Connect
 mongoose.connect(MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.error(err));
 
-// GridFS init
+// GridFS Init
 let gfs;
 const conn = mongoose.connection;
 
 conn.once("open", () => {
   gfs = Grid(conn.db, mongoose.mongo);
   gfs.collection("uploads");
-  console.log("📂 GridFS ready");
+  console.log("📂 GridFS Ready");
 });
 
-// Storage config
+// Storage Config
 const storage = new GridFsStorage({
   url: MONGO_URI,
   file: (req, file) => ({
@@ -51,7 +51,7 @@ const upload = multer({
   }
 });
 
-// 🔐 AUTH MIDDLEWARE
+// AUTH
 function auth(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "No token" });
@@ -59,7 +59,7 @@ function auth(req, res, next) {
   next();
 }
 
-// 🟢 Upload API (Admin only)
+// UPLOAD (ADMIN ONLY)
 app.post("/upload", auth, upload.single("photo"), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
@@ -67,7 +67,7 @@ app.post("/upload", auth, upload.single("photo"), (req, res) => {
   res.json({ url, filename: req.file.filename });
 });
 
-// 🟢 Serve Image (Public)
+// IMAGE VIEW (PUBLIC)
 app.get("/image/:filename", (req, res) => {
   gfs.files.findOne({ filename: req.params.filename }, (err, file) => {
     if (!file) return res.status(404).json({ error: "Not found" });
@@ -78,7 +78,7 @@ app.get("/image/:filename", (req, res) => {
   });
 });
 
-// 🔴 DELETE API (Admin only)
+// DELETE (ADMIN ONLY)
 app.delete("/delete/:filename", auth, async (req, res) => {
   try {
     const file = await gfs.files.findOne({ filename: req.params.filename });
@@ -91,6 +91,6 @@ app.delete("/delete/:filename", auth, async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => res.send("GridFS API running with Auth + Delete"));
+app.get("/", (req, res) => res.send("🟢 GridFS API Live"));
 
 app.listen(PORT, () => console.log(`🚀 Server running on ${PORT}`));
